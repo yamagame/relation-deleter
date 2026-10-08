@@ -188,7 +188,7 @@
   - _Depends: 2.1_
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.7, 9.1_
 
-- [ ] 6.2 削除の結合テスト（dry-run と execute）を追加する
+- [x] 6.2 削除の結合テスト（dry-run と execute）を追加する
   - ダンプしたスキーマファイルと手動定義を使って、次を確認する
   - dry-run: 実行の前後で全テーブルの行数と内容が変わらない
   - execute（確認省略）: 自己参照・相互参照・PK なし・PK 以外の参照・手動関連を含む起点の参照閉包だけが削除され、対象外の行は残る
@@ -232,3 +232,4 @@
 - 5.2: 収集から計画までの共通の流れは `collectAndPlan(ctx, inv, io, deps, tx Tx)` で、続行なら proceed、そうでなければ終了コードを返す。--execute は Open の後に `runExecute` に入る（5.2 の時点では `errExecuteNotImplemented`、5.3 で置き換える）。BeginTx には `context.WithoutCancel(ctx)` を渡す。dbconn.Resolve のエラーは exit 2
 - 5.3: 非対話かつ --yes なしの判定は BeginTx より前に行う（exit 3、何も変更しない）。stdin が端末かどうかは、キャラクタデバイスであり、かつ /dev/null でないことで判定する（新しい依存を入れないため。誤判定しても、明示的に y と入力されない限り削除しない）。失敗時のメッセージは "failed at table <T>: <op>: <cause>; all changes rolled back"
 - 6.1: ダンプの結合テストは integration/dump_test.go。パスワード確認用の一時ユーザー mrd_dump_* は t.Cleanup で削除する。8.0 の caching_sha2_password は、クライアントが既定で TLS 接続することに依存している
+- 6.2: E2E テストは integration/delete_test.go。期待する閉包は `expectedClosure` と `keyColumns` に明記している（フィクスチャを変えたら一緒に更新する）。スナップショットの canon 表記は、文字列 "NULL" と SQL の NULL や、値に含まれる "," "=" を区別しない（今のフィクスチャでは衝突しない）
