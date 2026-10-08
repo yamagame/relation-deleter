@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -74,10 +75,21 @@ func (m *memSource) Fetch(ctx context.Context, table string, columns []string, k
 	return out, nil
 }
 
-// fakeTx records every call. ExecContext and Commit must never be called by
-// the dry-run.
+// fakeTx records every call. The dry-run must never call ExecContext or
+// Commit. ExecContext records the statement and, unless scripted, reports one
+// affected row per argument (one row per value of a single-column key).
 type fakeTx struct {
 	queries, execs, commits, rollbacks int
+
+	stmts []string // every ExecContext query, in order
+	// execErr fails the first statement whose query contains the key.
+	execErr map[string]error
+	// affected overrides RowsAffected for statements whose query contains
+	// the key.
+	affected  map[string]int64
+	commitErr error
+	// execsAfterCommit counts statements issued after a Commit.
+	execsAfterCommit int
 }
 
 func (t *fakeTx) QueryContext(ctx context.Context, q string, args ...any) (*sql.Rows, error) {
@@ -87,11 +99,36 @@ func (t *fakeTx) QueryContext(ctx context.Context, q string, args ...any) (*sql.
 
 func (t *fakeTx) ExecContext(ctx context.Context, q string, args ...any) (sql.Result, error) {
 	t.execs++
-	return nil, errors.New("fakeTx: ExecContext must not be called")
+	t.stmts = append(t.stmts, q)
+	if t.commits > 0 {
+		t.execsAfterCommit++
+	}
+	for k, err := range t.execErr {
+		if strings.Contains(q, k) {
+			return nil, err
+		}
+	}
+	n := int64(len(args))
+	for k, v := range t.affected {
+		if strings.Contains(q, k) {
+			n = v
+		}
+	}
+	return driverResult(n), nil
 }
 
-func (t *fakeTx) Commit() error   { t.commits++; return nil }
+func (t *fakeTx) Commit() error {
+	t.commits++
+	return t.commitErr
+}
+
 func (t *fakeTx) Rollback() error { t.rollbacks++; return nil }
+
+// driverResult is a sql.Result with a fixed RowsAffected.
+type driverResult int64
+
+func (r driverResult) LastInsertId() (int64, error) { return 0, errors.New("not supported") }
+func (r driverResult) RowsAffected() (int64, error) { return int64(r), nil }
 
 // fakeDB is a TxBeginner and io.Closer that records BeginTx calls.
 type fakeDB struct {
@@ -119,6 +156,8 @@ type flowEnv struct {
 	src     *memSource
 	openErr error
 	env     map[string]string
+	in      io.Reader // stdin; empty when nil
+	tty     bool      // IsTerminal result
 
 	configs  []dbconn.Config
 	sources  int
@@ -160,11 +199,15 @@ type flowResult struct {
 
 func (e *flowEnv) run(ctx context.Context, args ...string) flowResult {
 	var out, errb bytes.Buffer
+	in := e.in
+	if in == nil {
+		in = strings.NewReader("")
+	}
 	io := IO{
-		In:         strings.NewReader(""),
+		In:         in,
 		Out:        &out,
 		Err:        &errb,
-		IsTerminal: func() bool { return false },
+		IsTerminal: func() bool { return e.tty },
 		Getenv:     func(k string) string { return e.env[k] },
 	}
 	code := Run(ctx, args, io, e.deps())
@@ -421,21 +464,4 @@ func TestDryRunRuntimeErrors(t *testing.T) {
 			t.Errorf("sources = %d, closed = %d; want 0, 1", e.sources, e.db.closed)
 		}
 	})
-}
-
-func TestExecuteReachesBoundary(t *testing.T) {
-	e := newFlowEnv()
-	r := e.run(context.Background(), flowArgs(t, "--id", "1", "--execute", "--yes")...)
-	if r.code != 1 {
-		t.Errorf("exit code = %d, want 1", r.code)
-	}
-	if want := "relation-deleter: --execute is not available in this build\n"; r.errOut != want {
-		t.Errorf("stderr = %q, want %q", r.errOut, want)
-	}
-	if len(e.db.opts) != 0 || e.sources != 0 {
-		t.Errorf("BeginTx calls = %d, NewRowSource calls = %d; want 0, 0", len(e.db.opts), e.sources)
-	}
-	if r.out != "" {
-		t.Errorf("stdout = %q, want empty", r.out)
-	}
 }

@@ -166,7 +166,7 @@
   - _Depends: 2.3, 3.3, 3.5, 3.6, 4.2_
   - _Requirements: 3.5, 3.6, 4.6, 5.1, 7.1, 7.2, 9.3_
 
-- [ ] 5.3 execute の流れ（確認・実行・確定）を統合する
+- [x] 5.3 execute の流れ（確認・実行・確定）を統合する
   - 実行が指定されたら、収集の前に読み書きのトランザクションを開き、5.2 の共通の流れで収集と計画の作成を行う
   - 次の順で判定する:
     1. 非対話環境で確認の省略がなければ、終了コード 3
@@ -230,3 +230,4 @@
 - 5.1: 入力検証の後は `runFlow(ctx, inv *invocation, io, deps)` に進む。5.1 の時点では `errFlowNotImplemented` で exit 1 を返す（5.2 で置き換える）。`invocation` は table / ids / execute / yes / maxRecords / chunkSize / conn / schema / relations / graph を持つ。dbconn.Resolve、データベース名の補完、Warnings の出力は 5.2 の担当。sqlDB アダプタは io.Closer を実装している
 - 5.1 追補: バイナリ PK の --id は `0x` 付きの16進で指定する（変換してから、型を区別して重複を除く）。int / bool フラグの値の位置にある `-p...` は拒否する
 - 5.2: 収集から計画までの共通の流れは `collectAndPlan(ctx, inv, io, deps, tx Tx)` で、続行なら proceed、そうでなければ終了コードを返す。--execute は Open の後に `runExecute` に入る（5.2 の時点では `errExecuteNotImplemented`、5.3 で置き換える）。BeginTx には `context.WithoutCancel(ctx)` を渡す。dbconn.Resolve のエラーは exit 2
+- 5.3: 非対話かつ --yes なしの判定は BeginTx より前に行う（exit 3、何も変更しない）。stdin が端末かどうかは、キャラクタデバイスであり、かつ /dev/null でないことで判定する（新しい依存を入れないため。誤判定しても、明示的に y と入力されない限り削除しない）。失敗時のメッセージは "failed at table <T>: <op>: <cause>; all changes rolled back"

@@ -46,14 +46,11 @@ type IO struct {
 // StdIO returns the IO of the current process.
 func StdIO() IO {
 	return IO{
-		In:  os.Stdin,
-		Out: os.Stdout,
-		Err: os.Stderr,
-		IsTerminal: func() bool {
-			fi, err := os.Stdin.Stat()
-			return err == nil && fi.Mode()&os.ModeCharDevice != 0
-		},
-		Getenv: os.Getenv,
+		In:         os.Stdin,
+		Out:        os.Stdout,
+		Err:        os.Stderr,
+		IsTerminal: stdinIsTerminal,
+		Getenv:     os.Getenv,
 	}
 }
 
