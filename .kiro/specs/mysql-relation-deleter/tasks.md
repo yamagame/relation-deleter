@@ -128,7 +128,7 @@
     - 件数不一致の検出
   - _Requirements: 6.5, 6.6, 6.7, 6.9_
 
-- [ ] 4.2 計画・要約・結果・警告・進捗の表示を実装する
+- [x] 4.2 計画・要約・結果・警告・進捗の表示を実装する
   - 計画の表示内容:
     - 削除順に、テーブル名、件数、対象になった理由の関連（FK 名か手動定義名か）、PK 一覧（PK のないテーブルは参照カラムの値）
     - 削除文をリテラル展開したもの（表示専用。バイト列は 16 進、文字列はエスケープ）
@@ -226,3 +226,4 @@
 - 3.5: plan はセンチネルエラー（ErrUnknownTable / ErrKeyLength / ErrNoVia / ErrNullValue / ErrBadEdge / ErrTotalMismatch）と `EffectiveChunkSize` を公開している。PK のないテーブルは関連ごとに DELETE するので、実削除件数の合計は Expected と一致する（レビューで、収集から計画まで通した模擬実行により確認済み）
 - 3.6: sqlstore は plan を import できないため、チャンクの定数（500 / 65535）を複製している。値を変えるときは両方を同時に直す。FLOAT と JSON のカラムは、取得した値を述語として渡し直すと一致しないことがある（PK や FK に使うのは非推奨。--help の注意書きに入れる候補）。レビューで、`app` の users.id=1 を起点に収集すると 16 テーブル・38 行になり、フィクスチャの閉包と一致することを確認した
 - 4.1: FK チェックの再有効化は `context.WithoutCancel` で発行する（Run の ctx がキャンセルされても戻すため）。cli は BeginTx に background 系の ctx を渡し、エラーの後は接続を再利用しないこと。`ExecError` のメッセージ形式は "table X: <op>: <cause>"。フィクスチャの teams↔team_members は SET NULL なので、FK チェックを切り替える意味は NO ACTION の fk_shipments_order で検証している
+- 4.2: 進捗は `report.Progress` の `Collect` / `Delete` メソッドを、collect.ProgressFunc と Executor.Progress にそのまま渡す。RenderPlan の Statements 欄は、execute.Run が発行する文と1対1で一致する（レビューで確認済み）。リテラル展開は表示専用
