@@ -289,6 +289,30 @@ func TestDumpUsageErrors(t *testing.T) {
 	})
 }
 
+// TestDumpRejectsOldServer checks that a server older than 5.7.8 is rejected
+// with exit code 2 and a message naming the required version (1.6). A mysql
+// shim answers SELECT VERSION() with 5.7.7, since no such server is running.
+func TestDumpRejectsOldServer(t *testing.T) {
+	requireDumpTools(t)
+	shimDir := t.TempDir()
+	shim := "#!/bin/bash\nprintf '%s\\n' '5.7.7-log'\n"
+	if err := os.WriteFile(filepath.Join(shimDir, "mysql"), []byte(shim), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	out := filepath.Join(t.TempDir(), "schema.json")
+	env := dumpEnv("MYSQL_PWD=root", "PATH="+shimDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	res := runDump(t, env, "-h", "127.0.0.1", "-P", "3306", "-u", "root", "-D", "app", "-o", out)
+	if res.code != 2 {
+		t.Errorf("exit code = %d, want 2; stderr:\n%s", res.code, res.stderr)
+	}
+	if !strings.Contains(res.stderr, "5.7.8") {
+		t.Errorf("stderr does not name the required version 5.7.8:\n%s", res.stderr)
+	}
+	if _, err := os.Stat(out); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("output file was created (stat err = %v)", err)
+	}
+}
+
 // dumpUserPassword is the distinctive password of the temporary MySQL user in
 // TestDumpPasswordNotInArgv.
 const dumpUserPassword = "S3cr3t-Dump!"

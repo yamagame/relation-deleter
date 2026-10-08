@@ -57,6 +57,16 @@ Credentials:
   file (keep the file readable only by you: chmod 600). MYSQL_PWD wins when
   both are given. Command-line flags win over the option file.
 
+Relations file (--relations):
+  version: 1
+  relations:
+    - name: orders_legacy_user          # optional (default manual#<index>)
+      child:  { table: legacy_orders, columns: [customer_id] }
+      parent: { table: users,         columns: [id] }
+  Each relation is treated like a foreign key from child to parent. Columns
+  are matched by position, so give the same number on both sides. Unknown
+  keys and tables or columns missing from the schema file are errors.
+
 Notes and limitations:
   - The default is a dry-run. --execute asks for confirmation on a terminal;
     without a terminal it requires --yes.
