@@ -1,0 +1,37 @@
+# Integration test servers. Start with:
+#   docker compose -f testdata/integration/docker-compose.yml up -d --wait
+# The credentials are for these throwaway test containers only.
+name: mysql-relation-deleter-it
+
+x-mysql-common: &mysql-common
+  environment:
+    MYSQL_ROOT_PASSWORD: root
+    MYSQL_DATABASE: app
+  command:
+    - --character-set-server=utf8mb4
+    - --collation-server=utf8mb4_unicode_ci
+  volumes:
+    - ./fixture.sql:/docker-entrypoint-initdb.d/fixture.sql:ro
+  healthcheck:
+    # Probe over TCP so the check only passes once the init scripts have run
+    # and the real server (not the temporary init server) is listening.
+    test: ["CMD-SHELL", "mysql -h127.0.0.1 -uroot -proot -e 'SELECT 1 FROM app.users LIMIT 1' >/dev/null 2>&1"]
+    interval: 5s
+    timeout: 5s
+    retries: 60
+    start_period: 30s
+
+services:
+  mysql57:
+    <<: *mysql-common
+    image: mysql:5.7
+    # mysql:5.7 is published for amd64 only; Apple Silicon runs it under emulation.
+    platform: linux/amd64
+    ports:
+      - "33057:3306"
+
+  mysql80:
+    <<: *mysql-common
+    image: mysql:8.0
+    ports:
+      - "33080:3306"

@@ -7,7 +7,7 @@
   - 完了の状態: asdf で固定した Go 1.27.1 で `go build ./...` と `go vet ./...` が成功し、コマンドのバイナリが生成される
   - _Requirements: 9.1_
 
-- [ ] 1.2 結合テスト用の MySQL 環境とフィクスチャを用意する
+- [x] 1.2 結合テスト用の MySQL 環境とフィクスチャを用意する
   - Docker で MySQL 5.7（`linux/amd64` 指定）と MySQL 8.0 を別ポートで同時に起動する定義を置く
   - フィクスチャは 5.7 と 8.0 の両方で通る構文で書き、照合順序は `utf8mb4_unicode_ci` を明示する
   - フィクスチャのスキーマとデータを用意する。含めるもの:
@@ -213,3 +213,6 @@
 ## Implementation Notes
 - 1.1: main パッケージしかない間は `go build ./...` がリポジトリ直下にバイナリを出力する。検証では `go vet ./...` か `go build -o "$TMPDIR/rd" ./cmd/relation-deleter` を使う
 - コミットは `git commit -- <paths>` でタスクのファイルだけを対象にする（.kiro/ と .gitignore にユーザーのステージ済み変更があるため）
+- 1.2: 共有 DB `app` はテストからは読み取り専用。データを変えるテストは必ず `mysqltest.IsolatedDB(t, target)` で専用 DB を使う（並列実行されるパッケージ同士の競合を避けるため）。MySQL ドライバ v1.10.1 は 1.2 で追加済み
+- 1.2: 結合テストは `docker compose -f testdata/integration/docker-compose.yml up -d --wait`（5.7: 33057、8.0: 33080）で起動してから `go test -tags integration ./...`。`MRD_MYSQL_VERSIONS=8.0` で対象を絞れる
+- 1.2: フィクスチャの削除起点は users.id=1。削除される行と残る行の一覧は fixture.sql の先頭コメントにある

@@ -1,0 +1,8 @@
+# Manual relation definitions (version 1) for testdata/integration/fixture.sql.
+# legacy_orders.customer_id holds a users.id but has no FK constraint, so the
+# relation is declared here.
+version: 1
+relations:
+  - name: orders_legacy_user
+    child:  { table: legacy_orders, columns: [customer_id] }
+    parent: { table: users,         columns: [id] }
