@@ -1,0 +1,43 @@
+{
+  "format_version": 1,
+  "database": "app",
+  "server_version": "5.7.44",
+  "tables": [
+    {"name": "audit_logs", "columns": [{"name": "user_id", "type": "bigint(20)", "nullable": false}, {"name": "order_id", "type": "bigint(20)", "nullable": true}, {"name": "action", "type": "varchar(32)", "nullable": false}, {"name": "logged_at", "type": "datetime", "nullable": false}], "primary_key": []},
+    {"name": "device_tokens", "columns": [{"name": "id", "type": "bigint(20)", "nullable": false}, {"name": "device_uuid", "type": "binary(16)", "nullable": false}, {"name": "token", "type": "varbinary(64)", "nullable": false}], "primary_key": ["id"]},
+    {"name": "devices", "columns": [{"name": "device_uuid", "type": "binary(16)", "nullable": false}, {"name": "user_id", "type": "bigint(20)", "nullable": false}, {"name": "label", "type": "varchar(100)", "nullable": false}], "primary_key": ["device_uuid"]},
+    {"name": "file_shares", "columns": [{"name": "id", "type": "bigint(20)", "nullable": false}, {"name": "content_hash", "type": "varbinary(32)", "nullable": false}, {"name": "shared_with", "type": "varchar(191)", "nullable": false}], "primary_key": ["id"]},
+    {"name": "files", "columns": [{"name": "id", "type": "bigint(20)", "nullable": false}, {"name": "user_id", "type": "bigint(20)", "nullable": false}, {"name": "content_hash", "type": "varbinary(32)", "nullable": false}, {"name": "body", "type": "blob", "nullable": false}], "primary_key": ["id"]},
+    {"name": "folders", "columns": [{"name": "id", "type": "bigint(20)", "nullable": false}, {"name": "user_id", "type": "bigint(20)", "nullable": false}, {"name": "parent_id", "type": "bigint(20)", "nullable": true}, {"name": "name", "type": "varchar(100)", "nullable": false}], "primary_key": ["id"]},
+    {"name": "legacy_orders", "columns": [{"name": "id", "type": "bigint(20)", "nullable": false}, {"name": "customer_id", "type": "bigint(20)", "nullable": true}, {"name": "note", "type": "varchar(100)", "nullable": false}], "primary_key": ["id"]},
+    {"name": "newsletter_subscriptions", "columns": [{"name": "id", "type": "bigint(20)", "nullable": false}, {"name": "email", "type": "varchar(191)", "nullable": false}, {"name": "topic", "type": "varchar(32)", "nullable": false}], "primary_key": ["id"]},
+    {"name": "order_items", "columns": [{"name": "id", "type": "bigint(20)", "nullable": false}, {"name": "order_id", "type": "bigint(20)", "nullable": false}, {"name": "sku", "type": "varchar(32)", "nullable": false}, {"name": "quantity", "type": "int(11)", "nullable": false}, {"name": "price", "type": "decimal(10,2)", "nullable": false}], "primary_key": ["id"]},
+    {"name": "orders", "columns": [{"name": "id", "type": "bigint(20)", "nullable": false}, {"name": "user_id", "type": "bigint(20)", "nullable": false}, {"name": "ordered_at", "type": "datetime", "nullable": false}], "primary_key": ["id"]},
+    {"name": "shipment_events", "columns": [{"name": "id", "type": "bigint(20)", "nullable": false}, {"name": "order_id", "type": "bigint(20)", "nullable": false}, {"name": "shipment_seq", "type": "int(11)", "nullable": false}, {"name": "status", "type": "varchar(32)", "nullable": false}], "primary_key": ["id"]},
+    {"name": "shipments", "columns": [{"name": "order_id", "type": "bigint(20)", "nullable": false}, {"name": "seq", "type": "int(11)", "nullable": false}, {"name": "carrier", "type": "varchar(32)", "nullable": false}], "primary_key": ["order_id", "seq"]},
+    {"name": "subscription_deliveries", "columns": [{"name": "id", "type": "bigint(20)", "nullable": false}, {"name": "subscription_id", "type": "bigint(20)", "nullable": false}, {"name": "delivered_at", "type": "datetime", "nullable": false}], "primary_key": ["id"]},
+    {"name": "team_members", "columns": [{"name": "id", "type": "bigint(20)", "nullable": false}, {"name": "team_id", "type": "bigint(20)", "nullable": true}, {"name": "user_id", "type": "bigint(20)", "nullable": false}], "primary_key": ["id"]},
+    {"name": "teams", "columns": [{"name": "id", "type": "bigint(20)", "nullable": false}, {"name": "owner_user_id", "type": "bigint(20)", "nullable": false}, {"name": "lead_member_id", "type": "bigint(20)", "nullable": true}, {"name": "name", "type": "varchar(100)", "nullable": false}], "primary_key": ["id"]},
+    {"name": "users", "columns": [{"name": "id", "type": "bigint(20)", "nullable": false}, {"name": "email", "type": "varchar(191)", "nullable": false}, {"name": "name", "type": "varchar(100)", "nullable": false}], "primary_key": ["id"]}
+  ],
+  "foreign_keys": [
+    {"name": "fk_audit_logs_order", "table": "audit_logs", "columns": ["order_id"], "delete_rule": "SET NULL", "referenced_table": "orders", "referenced_columns": ["id"]},
+    {"name": "fk_audit_logs_user", "table": "audit_logs", "columns": ["user_id"], "delete_rule": "RESTRICT", "referenced_table": "users", "referenced_columns": ["id"]},
+    {"name": "fk_device_tokens_device", "table": "device_tokens", "columns": ["device_uuid"], "delete_rule": "CASCADE", "referenced_table": "devices", "referenced_columns": ["device_uuid"]},
+    {"name": "fk_devices_user", "table": "devices", "columns": ["user_id"], "delete_rule": "CASCADE", "referenced_table": "users", "referenced_columns": ["id"]},
+    {"name": "fk_file_shares_content_hash", "table": "file_shares", "columns": ["content_hash"], "delete_rule": "CASCADE", "referenced_table": "files", "referenced_columns": ["content_hash"]},
+    {"name": "fk_files_user", "table": "files", "columns": ["user_id"], "delete_rule": "CASCADE", "referenced_table": "users", "referenced_columns": ["id"]},
+    {"name": "fk_folders_parent", "table": "folders", "columns": ["parent_id"], "delete_rule": "SET NULL", "referenced_table": "folders", "referenced_columns": ["id"]},
+    {"name": "fk_folders_user", "table": "folders", "columns": ["user_id"], "delete_rule": "CASCADE", "referenced_table": "users", "referenced_columns": ["id"]},
+    {"name": "fk_newsletter_subscriptions_email", "table": "newsletter_subscriptions", "columns": ["email"], "delete_rule": "CASCADE", "referenced_table": "users", "referenced_columns": ["email"]},
+    {"name": "fk_order_items_order", "table": "order_items", "columns": ["order_id"], "delete_rule": "CASCADE", "referenced_table": "orders", "referenced_columns": ["id"]},
+    {"name": "fk_orders_user", "table": "orders", "columns": ["user_id"], "delete_rule": "RESTRICT", "referenced_table": "users", "referenced_columns": ["id"]},
+    {"name": "fk_shipment_events_shipment", "table": "shipment_events", "columns": ["order_id", "shipment_seq"], "delete_rule": "CASCADE", "referenced_table": "shipments", "referenced_columns": ["order_id", "seq"]},
+    {"name": "fk_shipments_order", "table": "shipments", "columns": ["order_id"], "delete_rule": "NO ACTION", "referenced_table": "orders", "referenced_columns": ["id"]},
+    {"name": "fk_subscription_deliveries_subscription", "table": "subscription_deliveries", "columns": ["subscription_id"], "delete_rule": "CASCADE", "referenced_table": "newsletter_subscriptions", "referenced_columns": ["id"]},
+    {"name": "fk_team_members_team", "table": "team_members", "columns": ["team_id"], "delete_rule": "SET NULL", "referenced_table": "teams", "referenced_columns": ["id"]},
+    {"name": "fk_team_members_user", "table": "team_members", "columns": ["user_id"], "delete_rule": "RESTRICT", "referenced_table": "users", "referenced_columns": ["id"]},
+    {"name": "fk_teams_lead_member", "table": "teams", "columns": ["lead_member_id"], "delete_rule": "SET NULL", "referenced_table": "team_members", "referenced_columns": ["id"]},
+    {"name": "fk_teams_owner", "table": "teams", "columns": ["owner_user_id"], "delete_rule": "RESTRICT", "referenced_table": "users", "referenced_columns": ["id"]}
+  ]
+}
