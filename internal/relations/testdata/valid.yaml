@@ -1,0 +1,11 @@
+version: 1
+relations:
+  - name: orders_user
+    child:  { table: orders, columns: [user_id] }
+    parent: { table: users,  columns: [id] }
+  - child:
+      table: order_items
+      columns: [order_id, shop_id]
+    parent:
+      table: orders
+      columns: [id, shop_id]

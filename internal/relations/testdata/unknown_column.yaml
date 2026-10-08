@@ -1,0 +1,9 @@
+version: 1
+relations:
+  - name: bad_columns
+    child:
+      table: orders
+      columns: [id, user_idx]
+    parent:
+      table: users
+      columns: [id, missing]

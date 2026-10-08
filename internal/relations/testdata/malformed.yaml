@@ -1,0 +1,3 @@
+version: 1
+relations:
+  - child: { table: orders

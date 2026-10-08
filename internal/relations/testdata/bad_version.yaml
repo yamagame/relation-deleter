@@ -1,0 +1,4 @@
+version: 2
+relations:
+  - child:  { table: orders, columns: [user_id] }
+    parent: { table: users,  columns: [id] }

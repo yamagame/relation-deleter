@@ -1,0 +1,8 @@
+version: 1
+relations:
+  - name: mismatch
+    child:  { table: order_items, columns: [order_id, shop_id] }
+    parent: { table: orders,      columns: [id] }
+  - name: empty
+    child:  { table: orders, columns: [] }
+    parent: { table: users,  columns: [] }

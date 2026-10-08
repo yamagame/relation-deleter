@@ -1,0 +1,11 @@
+version: 1
+relations:
+  - name: ok
+    child:  { table: orders, columns: [user_id] }
+    parent: { table: users,  columns: [id] }
+  - name: bad_child
+    child:  { table: nope, columns: [user_id] }
+    parent: { table: users, columns: [id] }
+  - name: bad_parent
+    child:  { table: orders, columns: [user_id] }
+    parent: { table: ghosts, columns: [id] }

@@ -1,0 +1,8 @@
+version: 3
+relations:
+  - name: a
+    child:  { table: orders, columns: [user_id, nope] }
+    parent: { table: users,  columns: [id] }
+  - name: b
+    child:  { table: missing, columns: [x] }
+    parent: { table: users,   columns: [id] }

@@ -1,0 +1,6 @@
+version: 1
+relations:
+  - name: typo
+    child:  { table: orders, columns: [user_id] }
+    parent: { table: users,  column: [id] }
+    extra: true
