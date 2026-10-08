@@ -142,7 +142,7 @@
   - _Requirements: 3.5, 5.2, 5.3, 5.4, 5.5, 6.1, 6.8, 8.2_
 
 - [ ] 5. CLI の統合
-- [ ] 5.1 フラグの解析、DB 接続前の入力検証、DB 依存の差し替え口を実装する
+- [x] 5.1 フラグの解析、DB 接続前の入力検証、DB 依存の差し替え口を実装する
   - 設計の Deps（接続の生成と、行の取得元の生成）を受け取る実行の入口と、本番用の既定の Deps を用意する。エントリポイントは既定の Deps で実行の入口を呼ぶ
   - 使い方の表示に、認証情報の渡し方、制限事項、索引のない手動関連の注意を含める
   - 設計のフラグ体系を定義する。起点の値は繰り返し指定でき、複合 PK は CSV 形式（引用符で値内のカンマに対応）で受け取り、重複を除く
@@ -227,3 +227,4 @@
 - 3.6: sqlstore は plan を import できないため、チャンクの定数（500 / 65535）を複製している。値を変えるときは両方を同時に直す。FLOAT と JSON のカラムは、取得した値を述語として渡し直すと一致しないことがある（PK や FK に使うのは非推奨。--help の注意書きに入れる候補）。レビューで、`app` の users.id=1 を起点に収集すると 16 テーブル・38 行になり、フィクスチャの閉包と一致することを確認した
 - 4.1: FK チェックの再有効化は `context.WithoutCancel` で発行する（Run の ctx がキャンセルされても戻すため）。cli は BeginTx に background 系の ctx を渡し、エラーの後は接続を再利用しないこと。`ExecError` のメッセージ形式は "table X: <op>: <cause>"。フィクスチャの teams↔team_members は SET NULL なので、FK チェックを切り替える意味は NO ACTION の fk_shipments_order で検証している
 - 4.2: 進捗は `report.Progress` の `Collect` / `Delete` メソッドを、collect.ProgressFunc と Executor.Progress にそのまま渡す。RenderPlan の Statements 欄は、execute.Run が発行する文と1対1で一致する（レビューで確認済み）。リテラル展開は表示専用
+- 5.1: 入力検証の後は `runFlow(ctx, inv *invocation, io, deps)` に進む。5.1 の時点では `errFlowNotImplemented` で exit 1 を返す（5.2 で置き換える）。`invocation` は table / ids / execute / yes / maxRecords / chunkSize / conn / schema / relations / graph を持つ。dbconn.Resolve、データベース名の補完、Warnings の出力は 5.2 の担当。sqlDB アダプタは io.Closer を実装している
