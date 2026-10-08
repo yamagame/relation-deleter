@@ -269,6 +269,12 @@ func dumpSchema(t *testing.T, target mysqltest.Target) string {
 // through MYSQL_PWD, and stdin is not a terminal.
 func runDeleter(t *testing.T, target mysqltest.Target, schemaPath, table, id string, extra ...string) cliResult {
 	t.Helper()
+	return runDeleterTimeout(t, 2*time.Minute, target, schemaPath, table, id, extra...)
+}
+
+// runDeleterTimeout is runDeleter with the given deadline for the whole run.
+func runDeleterTimeout(t *testing.T, timeout time.Duration, target mysqltest.Target, schemaPath, table, id string, extra ...string) cliResult {
+	t.Helper()
 	args := []string{
 		"--schema", schemaPath,
 		"--relations", repoPath(t, "testdata", "relations.sample.yaml"),
@@ -289,7 +295,7 @@ func runDeleter(t *testing.T, target mysqltest.Target, schemaPath, table, id str
 			return ""
 		},
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	code := cli.Run(ctx, args, io, cli.DefaultDeps())
 	return cliResult{code: code, out: out.String(), err: errBuf.String()}
