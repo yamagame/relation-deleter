@@ -735,7 +735,7 @@ func DefaultDeps() Deps // dbconn.Open を *sql.DB のアダプタで包み、sq
 | `--schema PATH` | ✓ | スキーマファイル |
 | `--relations PATH` |  | 手動リレーション定義 |
 | `--table NAME` | ✓ | 起点テーブル |
-| `--id VALUE` | ✓（繰り返し可） | PK 値。複合 PK は PK の順に CSV で指定（`--id '10,"a,b"'`）。重複は除去する |
+| `--id VALUE` | ✓（繰り返し可） | PK 値。複合 PK は PK の順に CSV で指定（`--id '10,"a,b"'`）。バイナリ型の PK カラムでは `0x`/`0X` で始まる値を16進として解釈する（不正な16進は exit 2。BINARY(n) は格納時に 0x00 で右詰めされるので、全長を指定する）。重複は型を区別して変換後に除去する |
 | `--execute` |  | 削除を実行する（なければ dry-run） |
 | `--yes` |  | 確認を省略する |
 | `--max-records N` |  | 上限（0 は無制限、既定 0） |
