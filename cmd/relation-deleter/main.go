@@ -8,7 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/yamagame/mysql-relation-deleter/internal/cli"
+	"github.com/yamagame/relation-deleter/internal/cli"
 )
 
 func main() {

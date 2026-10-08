@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yamagame/mysql-relation-deleter/internal/execute"
+	"github.com/yamagame/relation-deleter/internal/execute"
 )
 
 // countingReader records whether the flow read stdin.

@@ -1,7 +1,7 @@
 # Research & Design Decisions
 
 ## Summary
-- **Feature**: `mysql-relation-deleter`
+- **Feature**: `relation-deleter`
 - **Discovery Scope**: New Feature（greenfield。full discovery を実施）
 - **Key Findings**:
   - `github.com/go-sql-driver/mysql` の最新版 v1.10.x は **Go 1.24 以上**が必要。Go 1.24+ を前提にする。開発環境は asdf で Go 1.27.1 をプロジェクトに固定した（`.tool-versions`）

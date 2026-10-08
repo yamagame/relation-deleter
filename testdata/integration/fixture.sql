@@ -1,4 +1,4 @@
--- Integration test fixture for mysql-relation-deleter.
+-- Integration test fixture for relation-deleter.
 --
 -- Runs unchanged on MySQL 5.7 and 8.0: no CTEs, window functions,
 -- utf8mb4_0900_* collations, functional indexes or invisible columns.

@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yamagame/mysql-relation-deleter/internal/graph"
-	"github.com/yamagame/mysql-relation-deleter/internal/schema"
+	"github.com/yamagame/relation-deleter/internal/graph"
+	"github.com/yamagame/relation-deleter/internal/schema"
 )
 
 // ---- fixtures -------------------------------------------------------------

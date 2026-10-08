@@ -72,7 +72,7 @@ import (
 
     "github.com/go-sql-driver/mysql" // 外部依存
 
-    "github.com/yamagame/mysql-relation-deleter/internal/schema" // 内部パッケージ
+    "github.com/yamagame/relation-deleter/internal/schema" // 内部パッケージ
 )
 ```
 グループは標準・外部・内部の3つに分け、`goimports` の順序に従う。パスエイリアスは使わない（モジュールパスで import する）。

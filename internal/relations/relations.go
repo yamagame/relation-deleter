@@ -18,7 +18,7 @@ import (
 
 	"go.yaml.in/yaml/v3"
 
-	"github.com/yamagame/mysql-relation-deleter/internal/schema"
+	"github.com/yamagame/relation-deleter/internal/schema"
 )
 
 // SupportedVersion is the only definition file version this package reads.

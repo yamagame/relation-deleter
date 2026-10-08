@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yamagame/mysql-relation-deleter/internal/testutil/mysqltest"
+	"github.com/yamagame/relation-deleter/internal/testutil/mysqltest"
 )
 
 // fixtureTables lists the base tables that testdata/integration/fixture.sql creates.

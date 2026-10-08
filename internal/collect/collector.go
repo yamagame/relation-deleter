@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/yamagame/mysql-relation-deleter/internal/graph"
-	"github.com/yamagame/mysql-relation-deleter/internal/schema"
+	"github.com/yamagame/relation-deleter/internal/graph"
+	"github.com/yamagame/relation-deleter/internal/schema"
 )
 
 // Collector collects the roots and all their descendants. It reads through

@@ -7,8 +7,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/yamagame/mysql-relation-deleter/internal/relations"
-	"github.com/yamagame/mysql-relation-deleter/internal/schema"
+	"github.com/yamagame/relation-deleter/internal/relations"
+	"github.com/yamagame/relation-deleter/internal/schema"
 )
 
 // rel builds a single-column manual relation child.parent_id -> parent.id.

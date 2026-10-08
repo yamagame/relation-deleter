@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/yamagame/mysql-relation-deleter/internal/collect"
-	"github.com/yamagame/mysql-relation-deleter/internal/dbconn"
-	"github.com/yamagame/mysql-relation-deleter/internal/execute"
-	"github.com/yamagame/mysql-relation-deleter/internal/plan"
-	"github.com/yamagame/mysql-relation-deleter/internal/report"
+	"github.com/yamagame/relation-deleter/internal/collect"
+	"github.com/yamagame/relation-deleter/internal/dbconn"
+	"github.com/yamagame/relation-deleter/internal/execute"
+	"github.com/yamagame/relation-deleter/internal/plan"
+	"github.com/yamagame/relation-deleter/internal/report"
 )
 
 // runFlow resolves the connection settings, connects and runs the dry-run or

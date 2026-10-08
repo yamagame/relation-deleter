@@ -11,9 +11,9 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/yamagame/mysql-relation-deleter/internal/collect"
-	"github.com/yamagame/mysql-relation-deleter/internal/graph"
-	"github.com/yamagame/mysql-relation-deleter/internal/schema"
+	"github.com/yamagame/relation-deleter/internal/collect"
+	"github.com/yamagame/relation-deleter/internal/graph"
+	"github.com/yamagame/relation-deleter/internal/schema"
 )
 
 // Statement is one DELETE statement with placeholders and its arguments.

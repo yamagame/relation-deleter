@@ -1,4 +1,4 @@
-# Design Document: mysql-relation-deleter
+# Design Document: relation-deleter
 
 ## Overview
 **Purpose**: MySQL の運用者に対して、指定したレコードと、それを直接・間接に参照するすべての子孫レコードを、漏れなく正しい順序で安全に削除する手段を提供する。
@@ -100,7 +100,7 @@ graph LR
 ### Directory Structure
 ```
 .
-├── go.mod                              # module github.com/yamagame/mysql-relation-deleter, go 1.24
+├── go.mod                              # module github.com/yamagame/relation-deleter, go 1.24
 ├── .tool-versions                      # golang 1.27.1（作成済み）
 ├── cmd/relation-deleter/
 │   └── main.go                         # cli.Run(…, cli.DefaultDeps()) を呼び、その戻り値で os.Exit するだけ

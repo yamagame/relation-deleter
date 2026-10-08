@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yamagame/mysql-relation-deleter/internal/collect"
-	"github.com/yamagame/mysql-relation-deleter/internal/schema"
+	"github.com/yamagame/relation-deleter/internal/collect"
+	"github.com/yamagame/relation-deleter/internal/schema"
 )
 
 // recordingQuerier records every query and fails it, so tests can prove that

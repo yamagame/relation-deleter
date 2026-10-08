@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yamagame/mysql-relation-deleter/internal/testutil/mysqltest"
+	"github.com/yamagame/relation-deleter/internal/testutil/mysqltest"
 )
 
 // The large-volume root: a user with volumeOrders orders and nothing else

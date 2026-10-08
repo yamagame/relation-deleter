@@ -13,13 +13,13 @@ import (
 	"os"
 	"strings"
 
-	"github.com/yamagame/mysql-relation-deleter/internal/collect"
-	"github.com/yamagame/mysql-relation-deleter/internal/dbconn"
-	"github.com/yamagame/mysql-relation-deleter/internal/execute"
-	"github.com/yamagame/mysql-relation-deleter/internal/graph"
-	"github.com/yamagame/mysql-relation-deleter/internal/relations"
-	"github.com/yamagame/mysql-relation-deleter/internal/schema"
-	"github.com/yamagame/mysql-relation-deleter/internal/sqlstore"
+	"github.com/yamagame/relation-deleter/internal/collect"
+	"github.com/yamagame/relation-deleter/internal/dbconn"
+	"github.com/yamagame/relation-deleter/internal/execute"
+	"github.com/yamagame/relation-deleter/internal/graph"
+	"github.com/yamagame/relation-deleter/internal/relations"
+	"github.com/yamagame/relation-deleter/internal/schema"
+	"github.com/yamagame/relation-deleter/internal/sqlstore"
 )
 
 // Exit codes (design "System Flows > 終了コード").

@@ -13,10 +13,10 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/yamagame/mysql-relation-deleter/internal/collect"
-	"github.com/yamagame/mysql-relation-deleter/internal/execute"
-	"github.com/yamagame/mysql-relation-deleter/internal/graph"
-	"github.com/yamagame/mysql-relation-deleter/internal/plan"
+	"github.com/yamagame/relation-deleter/internal/collect"
+	"github.com/yamagame/relation-deleter/internal/execute"
+	"github.com/yamagame/relation-deleter/internal/graph"
+	"github.com/yamagame/relation-deleter/internal/plan"
 )
 
 // ErrInconsistent is returned when the plan, collection and graph given to

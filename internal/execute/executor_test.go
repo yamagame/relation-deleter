@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yamagame/mysql-relation-deleter/internal/plan"
+	"github.com/yamagame/relation-deleter/internal/plan"
 )
 
 const (

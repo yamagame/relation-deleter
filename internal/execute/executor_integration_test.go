@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yamagame/mysql-relation-deleter/internal/plan"
-	"github.com/yamagame/mysql-relation-deleter/internal/testutil/mysqltest"
+	"github.com/yamagame/relation-deleter/internal/plan"
+	"github.com/yamagame/relation-deleter/internal/testutil/mysqltest"
 )
 
 // The fixture's mutual pair teams <-> team_members uses ON DELETE SET NULL in

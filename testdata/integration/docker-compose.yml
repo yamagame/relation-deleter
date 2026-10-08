@@ -1,7 +1,7 @@
 # Integration test servers. Start with:
 #   docker compose -f testdata/integration/docker-compose.yml up -d --wait
 # The credentials are for these throwaway test containers only.
-name: mysql-relation-deleter-it
+name: relation-deleter-it
 
 x-mysql-common: &mysql-common
   environment:

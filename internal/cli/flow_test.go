@@ -11,10 +11,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yamagame/mysql-relation-deleter/internal/collect"
-	"github.com/yamagame/mysql-relation-deleter/internal/dbconn"
-	"github.com/yamagame/mysql-relation-deleter/internal/schema"
-	"github.com/yamagame/mysql-relation-deleter/internal/sqlstore"
+	"github.com/yamagame/relation-deleter/internal/collect"
+	"github.com/yamagame/relation-deleter/internal/dbconn"
+	"github.com/yamagame/relation-deleter/internal/schema"
+	"github.com/yamagame/relation-deleter/internal/sqlstore"
 )
 
 // flowSchema is a two-table schema: orders.user_id -> users.id.

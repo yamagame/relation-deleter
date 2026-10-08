@@ -16,8 +16,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/yamagame/mysql-relation-deleter/internal/collect"
-	"github.com/yamagame/mysql-relation-deleter/internal/schema"
+	"github.com/yamagame/relation-deleter/internal/collect"
+	"github.com/yamagame/relation-deleter/internal/schema"
 )
 
 // defaultChunkSize and maxPlaceholders mirror plan.DefaultChunkSize and

@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/yamagame/mysql-relation-deleter/internal/relations"
-	"github.com/yamagame/mysql-relation-deleter/internal/schema"
+	"github.com/yamagame/relation-deleter/internal/relations"
+	"github.com/yamagame/relation-deleter/internal/schema"
 )
 
 func fk(name, table string, cols []string, ref string, refCols []string) schema.ForeignKey {

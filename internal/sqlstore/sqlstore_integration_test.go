@@ -12,9 +12,9 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/yamagame/mysql-relation-deleter/internal/collect"
-	"github.com/yamagame/mysql-relation-deleter/internal/schema"
-	"github.com/yamagame/mysql-relation-deleter/internal/testutil/mysqltest"
+	"github.com/yamagame/relation-deleter/internal/collect"
+	"github.com/yamagame/relation-deleter/internal/schema"
+	"github.com/yamagame/relation-deleter/internal/testutil/mysqltest"
 )
 
 // countingQuerier forwards to the real database and counts the queries.

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yamagame/mysql-relation-deleter/internal/schema"
+	"github.com/yamagame/relation-deleter/internal/schema"
 )
 
 // testSchema is the schema every testdata file is validated against.

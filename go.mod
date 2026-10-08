@@ -1,4 +1,4 @@
-module github.com/yamagame/mysql-relation-deleter
+module github.com/yamagame/relation-deleter
 
 go 1.24.0
 

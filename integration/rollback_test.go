@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/yamagame/mysql-relation-deleter/internal/schema"
-	"github.com/yamagame/mysql-relation-deleter/internal/testutil/mysqltest"
+	"github.com/yamagame/relation-deleter/internal/schema"
+	"github.com/yamagame/relation-deleter/internal/testutil/mysqltest"
 )
 
 // droppedFK is the NO ACTION constraint shipments.order_id -> orders.id

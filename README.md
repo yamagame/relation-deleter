@@ -1,4 +1,4 @@
-# mysql-relation-deleter
+# relation-deleter
 
 MySQL のレコードを、それを参照している子孫レコードごと、正しい順序で安全に削除するためのツールです。
 
@@ -192,7 +192,7 @@ MySQL ──(dump-schema.sh)──▶ schema.json ─┐
 3. テーブルを強連結成分の単位で、子から親の順に並べます。循環を含むテーブル群を削除する間だけ、セッションの `foreign_key_checks` を無効にします。
 4. dry-run なら計画を表示してロールバックします。execute なら、同じトランザクションの中で削除と件数検証を行ってからコミットします。
 
-設計の詳細は `.kiro/specs/mysql-relation-deleter/` にあります（要件、設計、タスク）。
+設計の詳細は `.kiro/specs/relation-deleter/` にあります（要件、設計、タスク）。
 
 ## 開発
 

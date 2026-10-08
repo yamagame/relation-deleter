@@ -20,8 +20,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yamagame/mysql-relation-deleter/internal/schema"
-	"github.com/yamagame/mysql-relation-deleter/internal/testutil/mysqltest"
+	"github.com/yamagame/relation-deleter/internal/schema"
+	"github.com/yamagame/relation-deleter/internal/testutil/mysqltest"
 )
 
 // dumpSummary is the stderr summary for the fixture database (1.4):

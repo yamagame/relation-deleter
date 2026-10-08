@@ -17,9 +17,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yamagame/mysql-relation-deleter/internal/cli"
-	"github.com/yamagame/mysql-relation-deleter/internal/schema"
-	"github.com/yamagame/mysql-relation-deleter/internal/testutil/mysqltest"
+	"github.com/yamagame/relation-deleter/internal/cli"
+	"github.com/yamagame/relation-deleter/internal/schema"
+	"github.com/yamagame/relation-deleter/internal/testutil/mysqltest"
 )
 
 // keyColumns names the columns that identify a row of each fixture table in
