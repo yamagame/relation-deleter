@@ -217,6 +217,6 @@
 - 1.2: 結合テストは `docker compose -f testdata/integration/docker-compose.yml up -d --wait`（5.7: 33057、8.0: 33080）で起動してから `go test -tags integration ./...`。`MRD_MYSQL_VERSIONS=8.0` で対象を絞れる
 - 1.2: フィクスチャの削除起点は users.id=1。削除される行と残る行の一覧は fixture.sql の先頭コメントにある
 - 1.3: `schema.LoadError` には設計の {Path, Reason} に加えて `Err`（原因）と `Unwrap()` がある。`errors.Is(err, fs.ErrNotExist)` で判定できる。識別子の引用は `schema.QuoteIdent` だけを使う
-- 2.1: 期待値ファイルの `server_version`（5.7.44 / 8.0.46）はコンテナイメージの版に依存する。6.1 の自動比較では、このフィールドを除外するかイメージを固定する。`MYSQL_PWD` と `--defaults-file` を両方指定した場合は `--defaults-file` が優先される
+- 2.1: 期待値ファイルの `server_version`（5.7.44 / 8.0.46）はコンテナイメージの版に依存する。6.1 の自動比較では、このフィールドを除外するかイメージを固定する。`MYSQL_PWD` と `--defaults-file` を両方指定した場合は、relation-deleter と同じく `MYSQL_PWD` のパスワードが優先される（一時 option file の先頭で利用者のファイルを `!include` し、その後ろにパスワードを書く。後の値が勝つ）
 - 2.2: 名前を省略した手動定義は 0 始まりの `manual#<i>` になる。`relations: []` は有効、`relations` キーがない場合はエラー。YAML ライブラリは go.yaml.in/yaml/v3 v3.0.5
 - 2.3: `dbconn.Config.Warnings`（option file のパーミッション警告など）は cli が stderr に出力する。`dbconn.Flags` はポインタ型で、未指定は nil。空の MYSQL_PWD は未設定として扱う

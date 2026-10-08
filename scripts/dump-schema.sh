@@ -41,8 +41,8 @@ Password:
       option file (mode 600, removed on exit) and removes it from the
       environment, so it never appears in process arguments or output.
     - --defaults-file FILE with a [client] section containing password=...
-  If both are given, --defaults-file wins: MYSQL_PWD is ignored (and removed
-  from the environment) with a warning.
+  If both are given, MYSQL_PWD wins over a password in --defaults-file (the
+  same order as relation-deleter); other settings in the file still apply.
 
 Requirements:
   MySQL $MIN_VERSION or later (5.7 or 8.0) and the mysql command-line client.
@@ -201,6 +201,11 @@ esac
 if [ -n "$DEFAULTS_FILE" ] && [ ! -r "$DEFAULTS_FILE" ]; then
 	usage_error "cannot read defaults file: $DEFAULTS_FILE"
 fi
+case $DEFAULTS_FILE in
+*$'\n'* | *$'\r'*)
+	usage_error "defaults file path must not contain line breaks"
+	;;
+esac
 
 OUTPUT_DIR=$(dirname -- "$OUTPUT")
 OUTPUT_BASE=$(basename -- "$OUTPUT")
@@ -216,12 +221,7 @@ fi
 # ---------------------------------------------------------------------------
 
 MYSQL_OPTION_FILE=""
-if [ -n "$DEFAULTS_FILE" ]; then
-	if [ "$HAVE_PASSWORD" -eq 1 ]; then
-		err "warning: both MYSQL_PWD and --defaults-file are set; using --defaults-file and ignoring MYSQL_PWD"
-	fi
-	MYSQL_OPTION_FILE=$DEFAULTS_FILE
-elif [ "$HAVE_PASSWORD" -eq 1 ]; then
+if [ "$HAVE_PASSWORD" -eq 1 ]; then
 	case $PASSWORD in
 	*$'\n'* | *$'\r'*)
 		usage_error "MYSQL_PWD must not contain line breaks"
@@ -234,9 +234,19 @@ elif [ "$HAVE_PASSWORD" -eq 1 ]; then
 	# a shell builtin, so the password is never part of a process's argv.
 	escaped=${PASSWORD//\\/\\\\}
 	escaped=${escaped//\"/\\\"}
-	printf '[client]\npassword="%s"\n' "$escaped" >"$OPT_FILE"
+	{
+		# mysql accepts only one --defaults-extra-file, so the user's file is
+		# included first and the password after it: later values win, which
+		# gives MYSQL_PWD priority over the file (same order as relation-deleter).
+		if [ -n "$DEFAULTS_FILE" ]; then
+			printf '!include %s\n' "$DEFAULTS_FILE"
+		fi
+		printf '[client]\npassword="%s"\n' "$escaped"
+	} >"$OPT_FILE"
 	escaped=""
 	MYSQL_OPTION_FILE=$OPT_FILE
+elif [ -n "$DEFAULTS_FILE" ]; then
+	MYSQL_OPTION_FILE=$DEFAULTS_FILE
 fi
 PASSWORD=""
 
