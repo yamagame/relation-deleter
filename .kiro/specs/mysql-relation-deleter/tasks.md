@@ -23,7 +23,7 @@
   - 完了の状態: コンテナを起動すると両方のバージョンにフィクスチャが投入され、結合テストの雛形が `go test -tags integration ./...` で両方への接続に成功する。手動定義のサンプルがフィクスチャの FK のない関連を指している
   - _Requirements: 1.1, 1.2, 1.7, 4.3, 4.4, 4.5_
 
-- [ ] 1.3 スキーマファイルの型・読み込み・構造検証を実装する
+- [x] 1.3 スキーマファイルの型・読み込み・構造検証を実装する
   - 設計のスキーマファイル形式（format_version 1）を読み込む
   - 次の場合は原因付きのエラーを返す: format_version の不一致、テーブル名やカラム名の重複、PK や FK のカラムが存在しない、FK の親子でカラム数が一致しない
   - カラム型からバイナリ系かどうかを判定する機能と、識別子をバッククォートで引用する機能（内部のバッククォートは二重化）を提供する
@@ -216,3 +216,4 @@
 - 1.2: 共有 DB `app` はテストからは読み取り専用。データを変えるテストは必ず `mysqltest.IsolatedDB(t, target)` で専用 DB を使う（並列実行されるパッケージ同士の競合を避けるため）。MySQL ドライバ v1.10.1 は 1.2 で追加済み
 - 1.2: 結合テストは `docker compose -f testdata/integration/docker-compose.yml up -d --wait`（5.7: 33057、8.0: 33080）で起動してから `go test -tags integration ./...`。`MRD_MYSQL_VERSIONS=8.0` で対象を絞れる
 - 1.2: フィクスチャの削除起点は users.id=1。削除される行と残る行の一覧は fixture.sql の先頭コメントにある
+- 1.3: `schema.LoadError` には設計の {Path, Reason} に加えて `Err`（原因）と `Unwrap()` がある。`errors.Is(err, fs.ErrNotExist)` で判定できる。識別子の引用は `schema.QuoteIdent` だけを使う

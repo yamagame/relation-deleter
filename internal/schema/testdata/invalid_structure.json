@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "database": "app",
+  "server_version": "8.0.36",
+  "tables": [
+    {"name": "users",
+     "columns": [{"name": "id", "type": "int", "nullable": false},
+                 {"name": "id", "type": "int", "nullable": false}],
+     "primary_key": ["uid"]},
+    {"name": "users", "columns": [{"name": "id", "type": "int", "nullable": false}], "primary_key": ["id"]},
+    {"name": "", "columns": [], "primary_key": []},
+    {"name": "orders",
+     "columns": [{"name": "id", "type": "int", "nullable": false},
+                 {"name": "user_id", "type": "int", "nullable": true}],
+     "primary_key": ["id"]}
+  ],
+  "foreign_keys": [
+    {"name": "fk_orders_user", "table": "orders", "columns": ["user_ref"],
+     "referenced_table": "users", "referenced_columns": ["user_id"], "delete_rule": "CASCADE"},
+    {"name": "fk_orders_ghost", "table": "orders", "columns": ["user_id"],
+     "referenced_table": "ghosts", "referenced_columns": ["id"], "delete_rule": "CASCADE"},
+    {"name": "fk_count", "table": "orders", "columns": ["id", "user_id"],
+     "referenced_table": "users", "referenced_columns": ["id"], "delete_rule": "CASCADE"}
+  ]
+}
