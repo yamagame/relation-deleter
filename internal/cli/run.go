@@ -201,7 +201,6 @@ func parseInvocation(args []string, io IO) (*invocation, int) {
 		}
 		ids = append(ids, parsedID{raw: raw, values: t})
 	}
-	ids = dedupeIDs(ids)
 
 	inv := &invocation{
 		table:      r.table,
@@ -252,7 +251,9 @@ func (inv *invocation) load(schemaPath, relationsPath string, ids []parsedID) []
 	}
 
 	if inv.table != "" {
-		errs = append(errs, checkRoots(s, schemaPath, inv.table, ids)...)
+		var rootErrs []string
+		ids, rootErrs = checkRoots(s, schemaPath, inv.table, ids)
+		errs = append(errs, rootErrs...)
 	}
 	if len(errs) > 0 {
 		return errs
@@ -261,6 +262,7 @@ func (inv *invocation) load(schemaPath, relationsPath string, ids []parsedID) []
 	inv.schema = s
 	inv.relations = rels
 	inv.graph = graph.Build(s, rels)
+	ids = dedupeIDs(ids) // after conversion, so 0x6162 and "ab" stay distinct
 	inv.ids = make([]collect.Tuple, len(ids))
 	for i, id := range ids {
 		inv.ids[i] = id.values
@@ -269,24 +271,43 @@ func (inv *invocation) load(schemaPath, relationsPath string, ids []parsedID) []
 }
 
 // checkRoots verifies that table exists, has a primary key, and that every
-// id has one value per primary key column (3.3, 3.4).
-func checkRoots(s *schema.Schema, schemaPath, table string, ids []parsedID) []string {
+// id has one value per primary key column (3.3, 3.4). It returns the ids
+// with hex values of binary primary key columns decoded to []byte, and
+// every problem found (an invalid hex value names the id and the column).
+func checkRoots(s *schema.Schema, schemaPath, table string, ids []parsedID) ([]parsedID, []string) {
 	t, ok := s.Table(table)
 	if !ok {
-		return []string{fmt.Sprintf("table %q not found in schema file %s", table, schemaPath)}
+		return nil, []string{fmt.Sprintf("table %q not found in schema file %s", table, schemaPath)}
 	}
 	pk := t.PrimaryKey
 	if len(pk) == 0 {
-		return []string{fmt.Sprintf("table %q has no primary key; rows of such a table cannot be selected with --id", table)}
+		return nil, []string{fmt.Sprintf("table %q has no primary key; rows of such a table cannot be selected with --id", table)}
 	}
 	var errs []string
+	out := make([]parsedID, 0, len(ids))
 	for _, id := range ids {
 		if len(id.values) != len(pk) {
 			errs = append(errs, fmt.Sprintf("--id %q: table %q has %s (%s), got %s",
 				id.raw, table, plural(len(pk), "primary key column"), strings.Join(pk, ", "), plural(len(id.values), "value")))
+			continue
+		}
+		conv := make(collect.Tuple, len(pk))
+		bad := false
+		for i, name := range pk {
+			col, _ := t.Column(name) // schema.Load guarantees PK columns exist
+			v, err := rootValue(*col, id.values[i].(string))
+			if err != nil {
+				errs = append(errs, fmt.Sprintf("--id %q: column %q: %v", id.raw, name, err))
+				bad = true
+				continue
+			}
+			conv[i] = v
+		}
+		if !bad {
+			out = append(out, parsedID{raw: id.raw, values: conv})
 		}
 	}
-	return errs
+	return out, errs
 }
 
 func plural(n int, noun string) string {

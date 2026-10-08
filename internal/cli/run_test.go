@@ -117,6 +117,13 @@ relations:
 			[]string{`--id "1,2": table "users" has 1 primary key column (id), got 2 values`}},
 		{"malformed CSV id", append(base, "--table", "users", "--id", `"1`), []string{`--id "\"1"`}},
 		{"empty id", append(base, "--table", "users", "--id", ""), []string{`--id "": empty value`}},
+		{"odd-length hex on binary PK", append(base, "--table", "devices", "--id", "0x123"),
+			[]string{`--id "0x123": column "device_uuid": invalid hex value`, "odd length"}},
+		{"non-hex chars on binary PK", append(base, "--table", "devices", "--id", "0xZZ", "--id", "0X0g"),
+			[]string{`--id "0xZZ": column "device_uuid": invalid hex value`, `--id "0X0g": column "device_uuid": invalid hex value`}},
+		{"password-like value of an int flag", append(base, "--table", "users", "--id", "1", "-P", "-psecret"), []string{"no password flag"}},
+		{"password-like value of an int flag with =", append(base, "--table", "users", "--id", "1", "--max-records=--password=secret"), []string{"no password flag"}},
+		{"password-like value of a bool flag", append(base, "--table", "users", "--id", "1", "--execute=-psecret"), []string{"no password flag"}},
 		{"bad table and bad relations together", append(base, "--relations", badRelations, "--table", "nope", "--id", "1"),
 			[]string{badRelations + ":3:", `table "nope" not found`}},
 	}
@@ -166,7 +173,7 @@ func TestRunHelp(t *testing.T) {
 				"Usage:", "--schema", "--relations", "--table", "--id", "--execute", "--yes",
 				"--max-records", "--chunk-size", "-h, --host", "-P, --port", "-u, --user",
 				"-D, --database", "--socket", "--defaults-file", "--help",
-				"MYSQL_PWD", "[client]", "no password flag",
+				"MYSQL_PWD", "[client]", "no password flag", "0x", "right-padded with 0x00",
 				"dry-run", "full table scan", "FLOAT", "JSON", "without a foreign key", "other databases",
 				"Exit codes:", "  0 ", "  1 ", "  2 ", "  3 ",
 			} {
@@ -185,6 +192,10 @@ func TestRunValidInputReachesFlowBoundary(t *testing.T) {
 			"--execute", "--yes", "--max-records", "10", "--chunk-size", "100",
 			"-h", "db.example", "-P", "3307", "-u", "app", "-D", "app", "--socket", "/tmp/s", "--defaults-file", "/dev/null"},
 		{"-schema", goldenSchema, "-table", "shipments", "-id", "1,2", "--id", `3,"4"`},
+		// A string value that looks like -p is passed through: it cannot make
+		// the flag parser fail, so it is never echoed in a parse error.
+		{"--schema", goldenSchema, "--table", "users", "--id", "-pfoo"},
+		{"--schema", goldenSchema, "--table", "devices", "--id", "0x000102030405060708090a0b0c0d0e0f"},
 	}
 	for _, args := range tests {
 		t.Run(strings.Join(args, " "), func(t *testing.T) {
@@ -285,6 +296,20 @@ func TestParseID(t *testing.T) {
 
 func TestDedupeIDs(t *testing.T) {
 	in := []parsedID{
+		{"0x0102", collect.Tuple{[]byte{1, 2}}},
+		{"[1 2]", collect.Tuple{"[1 2]"}},
+		{"0x6162", collect.Tuple{[]byte("ab")}},
+		{"ab", collect.Tuple{"ab"}},
+		{"0X0102", collect.Tuple{[]byte{1, 2}}},
+		{"0x", collect.Tuple{[]byte{}}},
+		{`""`, collect.Tuple{""}},
+	}
+	want := []parsedID{in[0], in[1], in[2], in[3], in[5], in[6]}
+	if got := dedupeIDs(in); !reflect.DeepEqual(got, want) {
+		t.Errorf("dedupeIDs across types = %#v, want %#v", got, want)
+	}
+
+	in = []parsedID{
 		{"2", collect.Tuple{"2"}},
 		{"1", collect.Tuple{"1"}},
 		{`"2"`, collect.Tuple{"2"}},
@@ -295,7 +320,7 @@ func TestDedupeIDs(t *testing.T) {
 		{",", collect.Tuple{"", ""}},
 		{`""`, collect.Tuple{""}},
 	}
-	want := []parsedID{in[0], in[1], in[3], in[4], in[7], in[8]}
+	want = []parsedID{in[0], in[1], in[3], in[4], in[7], in[8]}
 	if got := dedupeIDs(in); !reflect.DeepEqual(got, want) {
 		t.Errorf("dedupeIDs = %#v, want %#v", got, want)
 	}
@@ -325,4 +350,55 @@ func TestSQLDBAdapter(t *testing.T) {
 	if tx != nil {
 		t.Errorf("tx = %#v, want a nil interface on error", tx)
 	}
+}
+
+func TestRootIDHexConversion(t *testing.T) {
+	mixed := writeTemp(t, "mixed.json", `{"format_version": 1, "database": "x", "tables": [
+	  {"name": "t", "columns": [
+	    {"name": "id", "type": "int", "nullable": false},
+	    {"name": "uuid", "type": "VARBINARY(4)", "nullable": false},
+	    {"name": "label", "type": "varchar(10)", "nullable": false}],
+	   "primary_key": ["id", "uuid", "label"]}], "foreign_keys": []}`)
+	tests := []struct {
+		name   string
+		schema string
+		table  string
+		ids    []string
+		want   []collect.Tuple
+	}{
+		{"binary PK hex", goldenSchema, "devices", []string{"0x0102", "0XAbCd"}, []collect.Tuple{{[]byte{1, 2}}, {[]byte{0xab, 0xcd}}}},
+		{"binary PK empty hex", goldenSchema, "devices", []string{"0x"}, []collect.Tuple{{[]byte{}}}},
+		{"binary PK without prefix stays a string", goldenSchema, "devices", []string{"abc", "x0x01"}, []collect.Tuple{{"abc"}, {"x0x01"}}},
+		{"non-binary PK keeps 0x as a string", goldenSchema, "users", []string{"0x01"}, []collect.Tuple{{"0x01"}}},
+		{"dedupe after conversion", goldenSchema, "devices", []string{"0x6162", "ab", "0X6162", "ab"}, []collect.Tuple{{[]byte("ab")}, {"ab"}}},
+		{"composite mixing binary and non-binary", mixed, "t", []string{"0x01,0x01,0x01", `"0x01",0X,0x`, "0x01,0x01,0x01"},
+			[]collect.Tuple{{"0x01", []byte{1}, "0x01"}, {"0x01", []byte{}, "0x"}}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			args := []string{"--schema", tt.schema, "--table", tt.table}
+			for _, id := range tt.ids {
+				args = append(args, "--id", id)
+			}
+			var errb bytes.Buffer
+			inv, code := parseInvocation(args, IO{Out: &bytes.Buffer{}, Err: &errb})
+			if code != proceed {
+				t.Fatalf("code = %d; stderr:\n%s", code, errb.String())
+			}
+			if !reflect.DeepEqual(inv.ids, tt.want) {
+				t.Errorf("ids = %#v, want %#v", inv.ids, tt.want)
+			}
+		})
+	}
+
+	t.Run("bad hex in composite names the column", func(t *testing.T) {
+		code, _, stderr, opened := runCLI(t, "--schema", mixed, "--table", "t", "--id", "0xzz,0x1,a")
+		if code != 2 || opened != 0 {
+			t.Errorf("code = %d, opened = %d; want 2, 0", code, opened)
+		}
+		want := `relation-deleter: --id "0xzz,0x1,a": column "uuid": invalid hex value "0x1": odd length` + "\n"
+		if stderr != want {
+			t.Errorf("stderr = %q, want %q", stderr, want)
+		}
+	})
 }

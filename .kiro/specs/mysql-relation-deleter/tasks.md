@@ -228,3 +228,4 @@
 - 4.1: FK チェックの再有効化は `context.WithoutCancel` で発行する（Run の ctx がキャンセルされても戻すため）。cli は BeginTx に background 系の ctx を渡し、エラーの後は接続を再利用しないこと。`ExecError` のメッセージ形式は "table X: <op>: <cause>"。フィクスチャの teams↔team_members は SET NULL なので、FK チェックを切り替える意味は NO ACTION の fk_shipments_order で検証している
 - 4.2: 進捗は `report.Progress` の `Collect` / `Delete` メソッドを、collect.ProgressFunc と Executor.Progress にそのまま渡す。RenderPlan の Statements 欄は、execute.Run が発行する文と1対1で一致する（レビューで確認済み）。リテラル展開は表示専用
 - 5.1: 入力検証の後は `runFlow(ctx, inv *invocation, io, deps)` に進む。5.1 の時点では `errFlowNotImplemented` で exit 1 を返す（5.2 で置き換える）。`invocation` は table / ids / execute / yes / maxRecords / chunkSize / conn / schema / relations / graph を持つ。dbconn.Resolve、データベース名の補完、Warnings の出力は 5.2 の担当。sqlDB アダプタは io.Closer を実装している
+- 5.1 追補: バイナリ PK の --id は `0x` 付きの16進で指定する（変換してから、型を区別して重複を除く）。int / bool フラグの値の位置にある `-p...` は拒否する

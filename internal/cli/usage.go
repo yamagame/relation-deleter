@@ -26,7 +26,12 @@ Input:
                          repeatable). For a composite primary key give the
                          values in primary key order as one CSV record; quote a
                          value that contains a comma: --id '10,"a,b"'.
-                         Duplicate ids are ignored.
+                         For a binary primary key column (BINARY, VARBINARY,
+                         BLOB, BIT) a value starting with 0x or 0X is read as
+                         hex: --id 0x0a0b. BINARY(n) values are stored
+                         right-padded with 0x00, so give all n bytes. Other
+                         values, and 0x values of other columns, are used as
+                         text. Duplicate ids are ignored.
 
 Execution:
   --execute              delete the rows (default: dry-run, print the plan only)

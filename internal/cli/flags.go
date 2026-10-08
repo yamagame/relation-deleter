@@ -1,16 +1,18 @@
 package cli
 
 import (
+	"encoding/binary"
 	"encoding/csv"
+	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
-	"strconv"
 	"strings"
 
 	"github.com/yamagame/mysql-relation-deleter/internal/collect"
 	"github.com/yamagame/mysql-relation-deleter/internal/dbconn"
+	"github.com/yamagame/mysql-relation-deleter/internal/schema"
 )
 
 // defaultChunkSize is the default of --chunk-size.
@@ -113,35 +115,80 @@ var errPasswordFlag = errors.New("there is no password flag (-p/--password); set
 // passwordFlagGiven reports whether args contain a password flag in the
 // part the flag package would parse: -p, --password, either with "=value",
 // or a MySQL-client style attached value such as -psecret (any undefined
-// single-dash flag starting with "p"). It runs before fs.Parse so that the
-// parse error, which would echo the flag text, never shows a password.
+// single-dash flag starting with "p"). It runs before fs.Parse so that a
+// parse error, which echoes the offending text, never shows a password.
+//
+// A password-like token is also rejected as the value of a flag whose value
+// the flag package converts (int and bool flags), as in "-P -psecret" or
+// "--execute=-psecret": a conversion error would echo it. String values
+// (--table, --id, ...) are accepted as is and never cause a parse error, so
+// they are left alone.
 func passwordFlagGiven(fs *flag.FlagSet, args []string) bool {
 	for i := 0; i < len(args); i++ {
 		a := args[i]
 		if a == "--" || len(a) < 2 || a[0] != '-' {
 			return false // the flag package stops parsing here
 		}
-		doubleDash := strings.HasPrefix(a, "--")
 		name := strings.TrimPrefix(a[1:], "-")
-		hasValue := false
+		value, hasValue := "", false
 		if j := strings.IndexByte(name, '='); j >= 0 {
-			name, hasValue = name[:j], true
+			name, value, hasValue = name[:j], name[j+1:], true
 		}
-		if name == "p" || name == "password" {
+		if isPasswordToken(fs, a) {
 			return true
 		}
 		f := fs.Lookup(name)
 		if f == nil {
-			return !doubleDash && strings.HasPrefix(name, "p")
+			return false // unknown flag: Parse reports its name
 		}
-		if b, ok := f.Value.(interface{ IsBoolFlag() bool }); !hasValue && !(ok && b.IsBoolFlag()) {
-			i++ // skip the flag's separate value
+		converted := convertsValue(f)
+		if !hasValue && !isBoolFlag(f) && i+1 < len(args) {
+			i++ // the flag's separate value
+			value, hasValue = args[i], true
+		}
+		if hasValue && converted && isPasswordToken(fs, value) {
+			return true
 		}
 	}
 	return false
 }
 
-// parsedID is one --id value and its CSV fields.
+// isPasswordToken reports whether tok is -p, --password (with or without
+// "=value"), or an undefined single-dash flag starting with "p" (-psecret).
+func isPasswordToken(fs *flag.FlagSet, tok string) bool {
+	if len(tok) < 2 || tok[0] != '-' {
+		return false
+	}
+	doubleDash := strings.HasPrefix(tok, "--")
+	name := strings.TrimPrefix(tok[1:], "-")
+	if j := strings.IndexByte(name, '='); j >= 0 {
+		name = name[:j]
+	}
+	if name == "p" || name == "password" {
+		return true
+	}
+	return !doubleDash && strings.HasPrefix(name, "p") && fs.Lookup(name) == nil
+}
+
+func isBoolFlag(f *flag.Flag) bool {
+	b, ok := f.Value.(interface{ IsBoolFlag() bool })
+	return ok && b.IsBoolFlag()
+}
+
+// convertsValue reports whether Parse converts the flag's value and can
+// therefore fail with an error that echoes it (every flag except string
+// flags and --id).
+func convertsValue(f *flag.Flag) bool {
+	g, ok := f.Value.(flag.Getter)
+	if !ok {
+		return false // idList accepts any text
+	}
+	_, isString := g.Get().(string)
+	return !isString
+}
+
+// parsedID is one --id value and its fields: strings after CSV parsing, and
+// after checkRoots, []byte for hex values of binary primary key columns.
 type parsedID struct {
 	raw    string
 	values collect.Tuple
@@ -183,12 +230,51 @@ func dedupeIDs(ids []parsedID) []parsedID {
 	return out
 }
 
-// tupleKey is an injective encoding of a tuple of string values.
+// tupleKey is an injective encoding of a tuple whose values are string or
+// []byte: each value is a type tag followed by its length and bytes, so a
+// []byte and a string with the same bytes (or the same fmt rendering) never
+// collide.
 func tupleKey(t collect.Tuple) string {
-	var b strings.Builder
+	var b []byte
 	for _, v := range t {
-		b.WriteString(strconv.Quote(fmt.Sprint(v)))
-		b.WriteByte(',')
+		switch x := v.(type) {
+		case []byte:
+			b = append(b, 'b')
+			b = binary.AppendUvarint(b, uint64(len(x)))
+			b = append(b, x...)
+		default:
+			str := fmt.Sprint(x) // only strings occur; anything else is still tagged apart
+			if _, ok := x.(string); ok {
+				b = append(b, 's')
+			} else {
+				b = append(b, '?')
+			}
+			b = binary.AppendUvarint(b, uint64(len(str)))
+			b = append(b, str...)
+		}
 	}
-	return b.String()
+	return string(b)
+}
+
+// rootValue converts one --id field for a primary key column. For a binary
+// column a value starting with 0x or 0X is decoded as hex ("0x" alone is an
+// empty value); any other value, and every value of a non-binary column, is
+// kept as the string given.
+func rootValue(col schema.Column, field string) (collect.Value, error) {
+	if !col.IsBinary() || len(field) < 2 || field[0] != '0' || (field[1] != 'x' && field[1] != 'X') {
+		return field, nil
+	}
+	digits := field[2:]
+	if len(digits)%2 != 0 {
+		return nil, fmt.Errorf("invalid hex value %q: odd length", field)
+	}
+	out, err := hex.DecodeString(digits)
+	if err != nil {
+		var ib hex.InvalidByteError
+		if errors.As(err, &ib) {
+			return nil, fmt.Errorf("invalid hex value %q: non-hex character %q", field, rune(ib))
+		}
+		return nil, fmt.Errorf("invalid hex value %q: %v", field, err)
+	}
+	return out, nil
 }
