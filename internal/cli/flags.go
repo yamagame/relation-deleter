@@ -122,7 +122,9 @@ var errPasswordFlag = errors.New("there is no password flag (-p/--password); set
 // the flag package converts (int and bool flags), as in "-P -psecret" or
 // "--execute=-psecret": a conversion error would echo it. String values
 // (--table, --id, ...) are accepted as is and never cause a parse error, so
-// they are left alone.
+// they are left alone; later validation messages (e.g. an unknown --table)
+// may still quote such a value, which only happens when the user put a
+// password in the wrong place.
 func passwordFlagGiven(fs *flag.FlagSet, args []string) bool {
 	for i := 0; i < len(args); i++ {
 		a := args[i]
