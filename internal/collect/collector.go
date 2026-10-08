@@ -42,16 +42,17 @@ type run struct {
 // missing without a fetch. When no root is found, Collect returns a
 // Collection with no tables; deciding what that means is the caller's job.
 //
-// Tables are reached only when they have a primary key; reaching a child
-// table without one returns ErrUnkeyedTable wrapped with the table name
-// (collecting those tables is task 3.4's scope).
+// The root table must have a primary key. A child table without one is
+// fetched with keyed=false: its rows are identified by the tuple of all their
+// columns and carry the number of identical rows in Count, and the predicate
+// values of each edge are accumulated in Via for the delete (4.4).
 func (c *Collector) Collect(ctx context.Context, rootTable string, rootIDs []Tuple) (*Collection, error) {
 	t, ok := c.Schema.Table(rootTable)
 	if !ok {
 		return nil, fmt.Errorf("root table %s not found in schema", rootTable)
 	}
 	if len(t.PrimaryKey) == 0 {
-		return nil, fmt.Errorf("root table %s: %w", rootTable, ErrUnkeyedTable)
+		return nil, fmt.Errorf("root table %s has no primary key", rootTable)
 	}
 	r := &run{
 		c:       c,
@@ -69,7 +70,7 @@ func (c *Collector) Collect(ctx context.Context, rootTable string, rootIDs []Tup
 			r.coll.MissingRoots = append(r.coll.MissingRoots, id)
 			continue
 		}
-		rows, err := r.fetch(ctx, rootTable, cols, Predicate{Columns: t.PrimaryKey, Values: []Tuple{id}})
+		rows, err := r.fetch(ctx, rootTable, cols, true, Predicate{Columns: t.PrimaryKey, Values: []Tuple{id}})
 		if err != nil {
 			return nil, err
 		}
@@ -111,6 +112,7 @@ func (c *Collector) Collect(ctx context.Context, rootTable string, rootIDs []Tup
 func (r *run) follow(ctx context.Context, e *graph.Edge, parentKeys []RowKey) ([]RowKey, error) {
 	parent := r.coll.Tables[e.ParentTable]
 	pred := Predicate{Columns: e.ChildColumns}
+	var predKeys []RowKey // RowKeys of pred.Values
 	seen := make(map[RowKey]bool)
 	for _, k := range parentKeys {
 		entry := parent.Rows[k]
@@ -134,6 +136,7 @@ func (r *run) follow(ctx context.Context, e *graph.Edge, parentKeys []RowKey) ([
 		}
 		seen[vk] = true
 		pred.Values = append(pred.Values, tup)
+		predKeys = append(predKeys, vk)
 	}
 	if len(pred.Values) == 0 {
 		return nil, nil
@@ -143,43 +146,74 @@ func (r *run) follow(ctx context.Context, e *graph.Edge, parentKeys []RowKey) ([
 	if !ok {
 		return nil, fmt.Errorf("table %s not found in schema", e.ChildTable)
 	}
-	if len(child.PrimaryKey) == 0 {
-		return nil, fmt.Errorf("table %s: %w", e.ChildTable, ErrUnkeyedTable)
-	}
+	keyed := len(child.PrimaryKey) > 0
 	cols := r.fetchColumns(child)
-	rows, err := r.fetch(ctx, e.ChildTable, cols, pred)
+	rows, err := r.fetch(ctx, e.ChildTable, cols, keyed, pred)
 	if err != nil {
 		return nil, err
 	}
 	if len(rows) == 0 {
 		return nil, nil
 	}
+	// Via is recorded even when every fetched row is already collected (5.5).
 	ts := r.tableSet(child)
-	if ts.Via[e.ID] == nil {
-		ts.Via[e.ID] = &ViaEdge{EdgeID: e.ID}
+	via := ts.Via[e.ID]
+	if via == nil {
+		via = &ViaEdge{EdgeID: e.ID}
+		ts.Via[e.ID] = via
+	}
+	if !keyed {
+		if via.seen == nil {
+			via.seen = make(map[RowKey]bool)
+		}
+		for i, vk := range predKeys {
+			if !via.seen[vk] {
+				via.seen[vk] = true
+				via.Values = append(via.Values, pred.Values[i])
+			}
+		}
 	}
 	return r.add(ts, child, cols, rows)
 }
 
 // fetch checks ctx, calls the source, wraps its error with the table name and
-// reports progress.
-func (r *run) fetch(ctx context.Context, table string, cols []string, p Predicate) ([]Row, error) {
+// reports progress. Progress counts rows: one per row of a PK table, Count
+// per grouped row of a table without a PK.
+func (r *run) fetch(ctx context.Context, table string, cols []string, keyed bool, p Predicate) ([]Row, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	rows, err := r.c.Source.Fetch(ctx, table, cols, true, p)
+	rows, err := r.c.Source.Fetch(ctx, table, cols, keyed, p)
 	if err != nil {
 		return nil, fmt.Errorf("fetch %s: %w", table, err)
 	}
-	r.fetched[table] += int64(len(rows))
+	for _, row := range rows {
+		if !keyed && row.Count < 1 {
+			return nil, fmt.Errorf("fetch %s: grouped row has count %d", table, row.Count)
+		}
+		if keyed {
+			r.fetched[table]++
+		} else {
+			r.fetched[table] += row.Count
+		}
+	}
 	if r.c.Progress != nil {
 		r.c.Progress(table, r.fetched[table])
 	}
 	return rows, nil
 }
 
-// add inserts the rows not yet in ts and returns their keys. A PK table's
-// row always counts as 1.
+// add inserts the rows not yet in ts and returns their keys. A PK table's row
+// is keyed by its PK and always counts as 1. A row of a table without a PK is
+// keyed by all its column values (cols is every column then) and counts as
+// Row.Count.
+//
+// When a tuple of a table without a PK is already collected, whether it
+// arrives again through another edge or in another chunk of the same fetch,
+// its Count is left as it is. Identical rows cannot be told apart, and any
+// predicate that matches one copy matches every copy, so each fetch that
+// returns the tuple reports all of its copies: adding the Counts would count
+// the same rows twice.
 func (r *run) add(ts *TableSet, t *schema.Table, cols []string, rows []Row) ([]RowKey, error) {
 	var added []RowKey
 	for _, row := range rows {
@@ -190,9 +224,16 @@ func (r *run) add(ts *TableSet, t *schema.Table, cols []string, rows []Row) ([]R
 		for i, col := range cols {
 			values[col] = row.Values[i]
 		}
-		key := make(Tuple, len(t.PrimaryKey))
-		for i, col := range t.PrimaryKey {
-			key[i] = values[col]
+		var key Tuple
+		count := int64(1)
+		if ts.Keyed {
+			key = make(Tuple, len(t.PrimaryKey))
+			for i, col := range t.PrimaryKey {
+				key[i] = values[col]
+			}
+		} else {
+			key = slices.Clone(row.Values)
+			count = row.Count
 		}
 		rk, err := keyOf(key)
 		if err != nil {
@@ -201,8 +242,8 @@ func (r *run) add(ts *TableSet, t *schema.Table, cols []string, rows []Row) ([]R
 		if _, ok := ts.Rows[rk]; ok {
 			continue
 		}
-		ts.Rows[rk] = &RowEntry{Key: key, Count: 1, Values: values}
-		r.coll.Total++
+		ts.Rows[rk] = &RowEntry{Key: key, Count: count, Values: values}
+		r.coll.Total += count
 		added = append(added, rk)
 	}
 	return added, nil
@@ -225,8 +266,16 @@ func (r *run) tableSet(t *schema.Table) *TableSet {
 
 // fetchColumns returns the PK columns followed by every column the table is
 // referenced by (graph.ReferencedColumns), without duplicates and in a stable
-// order (4.5).
+// order (4.5). For a table without a PK it returns all columns in schema
+// order, which already include every referenced column.
 func (r *run) fetchColumns(t *schema.Table) []string {
+	if len(t.PrimaryKey) == 0 {
+		cols := make([]string, len(t.Columns))
+		for i, c := range t.Columns {
+			cols[i] = c.Name
+		}
+		return cols
+	}
 	cols := slices.Clone(t.PrimaryKey)
 	for _, ref := range r.c.Graph.ReferencedColumns(t.Name) {
 		for _, col := range ref {

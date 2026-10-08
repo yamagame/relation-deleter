@@ -133,6 +133,7 @@ type fakeSource struct {
 	calls []call
 	err   map[string]error // table -> error to return
 	after func(n int)      // called after each Fetch with the call count
+	chunk int              // predicate tuples per chunk; 0 means one chunk
 }
 
 func eq(a, b Value) bool {
@@ -160,7 +161,27 @@ func (f *fakeSource) Fetch(ctx context.Context, table string, columns []string, 
 	if err := f.err[table]; err != nil {
 		return nil, err
 	}
+	// Like the SQL implementation, the predicate is split into chunks and the
+	// results are concatenated; with keyed=false each chunk is grouped by all
+	// requested columns, so one tuple can appear once per chunk.
+	size := f.chunk
+	if size <= 0 {
+		size = len(p.Values)
+	}
 	var out []Row
+	for chunk := range slices.Chunk(p.Values, max(size, 1)) {
+		rows, err := f.fetchChunk(table, columns, keyed, Predicate{Columns: p.Columns, Values: chunk})
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, rows...)
+	}
+	return out, nil
+}
+
+func (f *fakeSource) fetchChunk(table string, columns []string, keyed bool, p Predicate) ([]Row, error) {
+	var out []Row
+	group := map[RowKey]int{} // keyed=false: tuple -> index in out
 	for _, r := range f.data[table] {
 		match := false
 		for _, tup := range p.Values {
@@ -182,6 +203,17 @@ func (f *fakeSource) Fetch(ctx context.Context, table string, columns []string, 
 		vals := make(Tuple, len(columns))
 		for i, c := range columns {
 			vals[i] = r[c]
+		}
+		if !keyed {
+			k, err := keyOf(vals)
+			if err != nil {
+				return nil, err
+			}
+			if i, ok := group[k]; ok {
+				out[i].Count++
+				continue
+			}
+			group[k] = len(out)
 		}
 		out = append(out, Row{Values: vals, Count: 1})
 	}
@@ -535,17 +567,11 @@ func TestCollectErrors(t *testing.T) {
 			t.Errorf("err = %v", err)
 		}
 	})
-	t.Run("unkeyed child", func(t *testing.T) {
-		c, _ := newCollector(&fakeSource{data: testData()})
-		_, err := c.Collect(context.Background(), "accounts", ids("1"))
-		if !errors.Is(err, ErrUnkeyedTable) || !strings.Contains(err.Error(), "audit") {
-			t.Errorf("err = %v, want ErrUnkeyedTable naming audit", err)
-		}
-	})
 	t.Run("unkeyed root", func(t *testing.T) {
 		c, _ := newCollector(&fakeSource{data: testData()})
-		if _, err := c.Collect(context.Background(), "loose", ids("1")); err == nil {
-			t.Error("want error for a root table without PK")
+		_, err := c.Collect(context.Background(), "loose", ids("1"))
+		if err == nil || !strings.Contains(err.Error(), "loose") || !strings.Contains(err.Error(), "primary key") {
+			t.Errorf("err = %v, want an error naming loose and its missing primary key", err)
 		}
 	})
 	t.Run("unknown root table", func(t *testing.T) {

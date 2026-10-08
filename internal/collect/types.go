@@ -43,9 +43,17 @@ type RowEntry struct {
 }
 
 // ViaEdge records that a table was reached through the edge EdgeID (5.5).
+//
+// For a table without a PK, Values accumulates every distinct parent-side
+// tuple (in Edge.ChildColumns order) sent in a predicate along this edge
+// whose fetch returned rows, in first-sent order; plan deletes such a table
+// with (ChildColumns) IN (Values) (4.4). For a PK table Values stays nil to
+// save memory: those rows are deleted by their PK.
 type ViaEdge struct {
 	EdgeID int
-	Values []Tuple // for a table without a PK: parent-side values used by the delete predicate
+	Values []Tuple
+
+	seen map[RowKey]bool // RowKeys of Values, for deduplication
 }
 
 // TableSet is the collected records of one table.
@@ -67,12 +75,6 @@ type Collection struct {
 // ProgressFunc is notified after every Fetch with the cumulative number of
 // rows fetched so far from table (8.2). Throttling is the caller's job.
 type ProgressFunc func(table string, fetched int64)
-
-// ErrUnkeyedTable is returned when the traversal reaches a child table that
-// has no primary key. Collecting such tables is the scope of task 3.4, which
-// replaces this path; until then Collect stops with this error rather than
-// guessing an identity for the rows.
-var ErrUnkeyedTable = errors.New("table has no primary key")
 
 // ErrValueType is returned for a value that is not string, []byte or nil.
 var ErrValueType = errors.New("unsupported value type")
