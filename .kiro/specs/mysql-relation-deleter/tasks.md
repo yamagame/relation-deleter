@@ -51,7 +51,7 @@
   - _Boundary: relations_
   - _Requirements: 2.1, 2.3, 2.4_
 
-- [ ] 2.3 (P) 接続設定の解決とデータベース接続を実装する
+- [x] 2.3 (P) 接続設定の解決とデータベース接続を実装する
   - フラグ、パスワード環境変数、option file の `[client]` セクションを、設計の優先順位で統合する
   - option file のパーミッションが緩い場合は警告する
   - パスワードを含まない接続先表記を提供する。接続エラーにはその表記だけを付け、DSN やパスワードは含めない
@@ -219,3 +219,4 @@
 - 1.3: `schema.LoadError` には設計の {Path, Reason} に加えて `Err`（原因）と `Unwrap()` がある。`errors.Is(err, fs.ErrNotExist)` で判定できる。識別子の引用は `schema.QuoteIdent` だけを使う
 - 2.1: 期待値ファイルの `server_version`（5.7.44 / 8.0.46）はコンテナイメージの版に依存する。6.1 の自動比較では、このフィールドを除外するかイメージを固定する。`MYSQL_PWD` と `--defaults-file` を両方指定した場合は `--defaults-file` が優先される
 - 2.2: 名前を省略した手動定義は 0 始まりの `manual#<i>` になる。`relations: []` は有効、`relations` キーがない場合はエラー。YAML ライブラリは go.yaml.in/yaml/v3 v3.0.5
+- 2.3: `dbconn.Config.Warnings`（option file のパーミッション警告など）は cli が stderr に出力する。`dbconn.Flags` はポインタ型で、未指定は nil。空の MYSQL_PWD は未設定として扱う
