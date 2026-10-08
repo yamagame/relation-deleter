@@ -155,7 +155,7 @@
   - _Depends: 1.3, 2.2_
   - _Requirements: 2.3, 2.4, 3.1, 3.2, 3.3, 3.4, 3.7_
 
-- [ ] 5.2 dry-run の流れを統合する
+- [x] 5.2 dry-run の流れを統合する
   - データベース名が指定されなければ、スキーマファイルのデータベース名を使う
   - 接続し（失敗時は接続先とエラーを表示して終了コード 1）、読み取り専用トランザクションで収集する
   - 「収集 → 欠落の警告 → 上限チェック → 計画の作成」を、トランザクションを引数に取る共通の流れにまとめる（5.3 で再利用する）
@@ -229,3 +229,4 @@
 - 4.2: 進捗は `report.Progress` の `Collect` / `Delete` メソッドを、collect.ProgressFunc と Executor.Progress にそのまま渡す。RenderPlan の Statements 欄は、execute.Run が発行する文と1対1で一致する（レビューで確認済み）。リテラル展開は表示専用
 - 5.1: 入力検証の後は `runFlow(ctx, inv *invocation, io, deps)` に進む。5.1 の時点では `errFlowNotImplemented` で exit 1 を返す（5.2 で置き換える）。`invocation` は table / ids / execute / yes / maxRecords / chunkSize / conn / schema / relations / graph を持つ。dbconn.Resolve、データベース名の補完、Warnings の出力は 5.2 の担当。sqlDB アダプタは io.Closer を実装している
 - 5.1 追補: バイナリ PK の --id は `0x` 付きの16進で指定する（変換してから、型を区別して重複を除く）。int / bool フラグの値の位置にある `-p...` は拒否する
+- 5.2: 収集から計画までの共通の流れは `collectAndPlan(ctx, inv, io, deps, tx Tx)` で、続行なら proceed、そうでなければ終了コードを返す。--execute は Open の後に `runExecute` に入る（5.2 の時点では `errExecuteNotImplemented`、5.3 で置き換える）。BeginTx には `context.WithoutCancel(ctx)` を渡す。dbconn.Resolve のエラーは exit 2

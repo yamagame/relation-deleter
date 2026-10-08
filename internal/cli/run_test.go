@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -185,32 +186,46 @@ func TestRunHelp(t *testing.T) {
 	}
 }
 
-func TestRunValidInputReachesFlowBoundary(t *testing.T) {
+// TestRunValidInputReachesOpen checks that valid input passes every check
+// before the database and reaches deps.Open exactly once.
+func TestRunValidInputReachesOpen(t *testing.T) {
 	tests := [][]string{
-		{"--schema", goldenSchema, "--table", "users", "--id", "1"},
+		{"--schema", goldenSchema, "--table", "users", "--id", "1", "-u", "app"},
 		{"--schema", goldenSchema, "--relations", sampleRelations, "--table", "users", "--id", "1", "--id", "2",
 			"--execute", "--yes", "--max-records", "10", "--chunk-size", "100",
-			"-h", "db.example", "-P", "3307", "-u", "app", "-D", "app", "--socket", "/tmp/s", "--defaults-file", "/dev/null"},
-		{"-schema", goldenSchema, "-table", "shipments", "-id", "1,2", "--id", `3,"4"`},
+			"-h", "db.example", "-P", "3307", "-u", "app", "-D", "app", "--socket", "/tmp/s"},
+		{"-schema", goldenSchema, "-table", "shipments", "-id", "1,2", "--id", `3,"4"`, "-u", "app"},
 		// A string value that looks like -p is passed through: it cannot make
 		// the flag parser fail, so it is never echoed in a parse error.
-		{"--schema", goldenSchema, "--table", "users", "--id", "-pfoo"},
-		{"--schema", goldenSchema, "--table", "devices", "--id", "0x000102030405060708090a0b0c0d0e0f"},
+		{"--schema", goldenSchema, "--table", "users", "--id", "-pfoo", "-u", "app"},
+		{"--schema", goldenSchema, "--table", "devices", "--id", "0x000102030405060708090a0b0c0d0e0f", "-u", "app"},
 	}
 	for _, args := range tests {
 		t.Run(strings.Join(args, " "), func(t *testing.T) {
-			code, stdout, stderr, opened := runCLI(t, args...)
+			opened := 0
+			deps := Deps{
+				Open: func(ctx context.Context, c dbconn.Config) (TxBeginner, error) {
+					opened++
+					return nil, errors.New("connect to " + c.Redacted() + ": refused")
+				},
+				NewRowSource: func(q sqlstore.Querier, s *schema.Schema, chunkSize int) collect.RowSource {
+					t.Errorf("deps.NewRowSource called")
+					return nil
+				},
+			}
+			var out, errb bytes.Buffer
+			code := Run(context.Background(), args, IO{Out: &out, Err: &errb, Getenv: func(string) string { return "" }}, deps)
 			if code != 1 {
-				t.Errorf("exit code = %d, want 1\nstderr:\n%s", code, stderr)
+				t.Errorf("exit code = %d, want 1\nstderr:\n%s", code, errb.String())
 			}
-			if opened != 0 {
-				t.Errorf("deps.Open called %d times by 5.1 code", opened)
+			if opened != 1 {
+				t.Errorf("deps.Open called %d times, want 1", opened)
 			}
-			if stdout != "" {
-				t.Errorf("stdout = %q, want empty", stdout)
+			if out.Len() != 0 {
+				t.Errorf("stdout = %q, want empty", out.String())
 			}
-			if want := "relation-deleter: database flow is not available in this build\n"; stderr != want {
-				t.Errorf("stderr = %q, want %q", stderr, want)
+			if !strings.HasPrefix(errb.String(), "relation-deleter: connect to app@") {
+				t.Errorf("stderr = %q", errb.String())
 			}
 		})
 	}

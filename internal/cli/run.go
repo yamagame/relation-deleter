@@ -134,18 +134,6 @@ func Run(ctx context.Context, args []string, io IO, deps Deps) int {
 	return runFlow(ctx, inv, io, deps)
 }
 
-// errFlowNotImplemented marks the boundary between task 5.1 (flags and
-// validation before any database access) and tasks 5.2/5.3 (the dry-run and
-// execute flows). runFlow returns it until those tasks replace runFlow; it
-// is never reached by invalid input.
-var errFlowNotImplemented = errors.New("database flow is not available in this build")
-
-// runFlow connects, collects, plans and prints or executes (tasks 5.2/5.3).
-func runFlow(ctx context.Context, inv *invocation, io IO, deps Deps) int {
-	printErrors(io.Err, errFlowNotImplemented.Error())
-	return exitRuntime
-}
-
 // parseInvocation parses and validates args and loads the input files. It
 // returns proceed and the invocation when the input is valid; otherwise it
 // has printed the help or the errors and returns the exit code.
